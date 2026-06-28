@@ -18,7 +18,9 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
     const supabase = createClient();
-    const email = `${username.trim().toLowerCase()}@${domain}`;
+    const entry = username.trim().toLowerCase();
+    // Accept a real email (admins) or a plain username (synthetic email).
+    const email = entry.includes("@") ? entry : `${entry}@${domain}`;
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
@@ -39,7 +41,7 @@ export default function LoginPage() {
         <form onSubmit={onSubmit} className="card space-y-4">
           <div>
             <label className="label" htmlFor="username">
-              Username
+              Username or email
             </label>
             <input
               id="username"

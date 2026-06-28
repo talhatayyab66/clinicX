@@ -10,6 +10,7 @@ export default function SetupPage() {
     clinic_name: "",
     full_name: "",
     username: "",
+    email: "",
     password: "",
   });
   const [error, setError] = useState<string | null>(null);
@@ -98,6 +99,20 @@ export default function SetupPage() {
               onChange={(e) => setForm({ ...form, username: e.target.value })}
               required
             />
+          </div>
+          <div>
+            <label className="label">Email</label>
+            <input
+              type="email"
+              className="input"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              placeholder="you@example.com"
+              required
+            />
+            <p className="mt-1 text-xs text-gray-400">
+              Used for sign-in and password recovery.
+            </p>
           </div>
           <div>
             <label className="label">Password</label>

@@ -35,6 +35,8 @@ export async function POST(req: Request) {
   const password = body?.password ?? "";
   const full_name = (body?.full_name ?? "").trim();
   const clinic_name = (body?.clinic_name ?? "").trim() || "My Clinic";
+  // Optional real email for the admin. Falls back to the synthetic one.
+  const emailInput = (body?.email ?? "").trim().toLowerCase();
 
   if (!username || !password || !full_name) {
     return NextResponse.json(
@@ -48,8 +50,15 @@ export async function POST(req: Request) {
       { status: 400 }
     );
   }
+  if (emailInput && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput)) {
+    return NextResponse.json(
+      { error: "Please enter a valid email address" },
+      { status: 400 }
+    );
+  }
 
-  const email = `${username}@${DOMAIN}`;
+  // Use the admin's real email if given, otherwise the synthetic username email.
+  const email = emailInput || `${username}@${DOMAIN}`;
 
   // 1. create the auth user
   const { data: created, error: authErr } = await admin.auth.admin.createUser({
