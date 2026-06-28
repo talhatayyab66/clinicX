@@ -12,6 +12,7 @@ export default function SettingsClient({ settings }: { settings: Settings | null
     clinic_name: settings?.clinic_name ?? "",
     address: settings?.address ?? "",
     phone: settings?.phone ?? "",
+    email: settings?.email ?? "",
     currency: settings?.currency ?? "USD",
     currency_symbol: settings?.currency_symbol ?? "$",
     region: settings?.region ?? "US",
@@ -34,6 +35,7 @@ export default function SettingsClient({ settings }: { settings: Settings | null
         clinic_name: form.clinic_name || null,
         address: form.address || null,
         phone: form.phone || null,
+        email: form.email || null,
         currency: form.currency,
         currency_symbol: form.currency_symbol,
         region: form.region,
@@ -67,6 +69,10 @@ export default function SettingsClient({ settings }: { settings: Settings | null
         <div>
           <label className="label">Phone</label>
           <input className="input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+        </div>
+        <div>
+          <label className="label">Email</label>
+          <input className="input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
         </div>
         <div>
           <label className="label">Logo URL</label>
