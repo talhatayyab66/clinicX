@@ -13,6 +13,20 @@ export async function GET() {
 
 // POST → create an admin account (no limit) and ensure the settings row exists.
 export async function POST(req: Request) {
+  // Surface missing config as a clear message instead of crashing the route.
+  if (
+    !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    !process.env.SUPABASE_SERVICE_ROLE_KEY
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          "Server is missing Supabase configuration. In Vercel, set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (the secret key), then redeploy.",
+      },
+      { status: 500 }
+    );
+  }
+
   const admin = createAdminClient();
 
   const body = await req.json().catch(() => null);

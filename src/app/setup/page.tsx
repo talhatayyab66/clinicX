@@ -19,16 +19,31 @@ export default function SetupPage() {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const res = await fetch("/api/setup", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    const data = await res.json();
-    setLoading(false);
-    if (!res.ok) {
-      setError(data.error ?? "Setup failed");
+    try {
+      const res = await fetch("/api/setup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      // Response may not be JSON if the server crashed — read text first.
+      const text = await res.text();
+      let data: { error?: string } = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        data = { error: text.slice(0, 200) || `Server error (${res.status})` };
+      }
+      if (!res.ok) {
+        setError(data.error ?? `Setup failed (${res.status})`);
+        return;
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Network error — please try again"
+      );
       return;
+    } finally {
+      setLoading(false);
     }
     router.push("/login");
   }
