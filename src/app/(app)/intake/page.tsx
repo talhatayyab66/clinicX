@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Autocomplete from "@/components/Autocomplete";
 import { COMPLAINTS } from "@/lib/clinicalData";
+import { fetchTerms, mergeOptions, rememberTerm } from "@/lib/terms";
 import type { Patient, Vitals } from "@/lib/types";
 
 export default function IntakePage() {
@@ -27,6 +28,7 @@ export default function IntakePage() {
 
   const [vitals, setVitals] = useState({ bp: "", pulse: "", temp: "", spo2: "" });
   const [complaint, setComplaint] = useState("");
+  const [complaintOpts, setComplaintOpts] = useState<string[]>(COMPLAINTS);
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,6 +57,12 @@ export default function IntakePage() {
     const t = setTimeout(search, 250);
     return () => clearTimeout(t);
   }, [search]);
+
+  useEffect(() => {
+    fetchTerms(supabase, "complaint").then((c) =>
+      setComplaintOpts(mergeOptions(COMPLAINTS, c))
+    );
+  }, [supabase]);
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -103,6 +111,7 @@ export default function IntakePage() {
       });
       if (vErr) throw vErr;
 
+      await rememberTerm(supabase, "complaint", complaint, complaintOpts);
       router.push("/intake/done");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save");
@@ -261,7 +270,7 @@ export default function IntakePage() {
           <label className="label">Presenting complaint</label>
           <Autocomplete
             value={complaint}
-            options={COMPLAINTS}
+            options={complaintOpts}
             placeholder="Type to search complaints…"
             onChange={setComplaint}
           />

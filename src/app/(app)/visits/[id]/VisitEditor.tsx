@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { calcQty } from "@/lib/types";
 import Autocomplete from "@/components/Autocomplete";
 import MedicineSelect from "@/components/MedicineSelect";
 import { COMPLAINTS, DIAGNOSES, CO_MORBS } from "@/lib/clinicalData";
+import { fetchTerms, mergeOptions, rememberTerm } from "@/lib/terms";
 import type {
   Frequency,
   Medicine,
@@ -96,6 +97,20 @@ export default function VisitEditor({
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
+  // remembered complaint / diagnosis terms merged with the built-in lists
+  const [complaintOpts, setComplaintOpts] = useState<string[]>(COMPLAINTS);
+  const [diagnosisOpts, setDiagnosisOpts] = useState<string[]>(DIAGNOSES);
+  useEffect(() => {
+    (async () => {
+      const [c, d] = await Promise.all([
+        fetchTerms(supabase, "complaint"),
+        fetchTerms(supabase, "diagnosis"),
+      ]);
+      setComplaintOpts(mergeOptions(COMPLAINTS, c));
+      setDiagnosisOpts(mergeOptions(DIAGNOSES, d));
+    })();
+  }, [supabase]);
+
   // ----- co-morbidities (checkbox chips + free-text "other") -----
   const comorbTokens = form.comorbidities
     .split(",")
@@ -179,6 +194,12 @@ export default function VisitEditor({
         return false;
       }
     }
+
+    // remember any newly-typed complaint / diagnosis for the dropdowns
+    await Promise.all([
+      rememberTerm(supabase, "complaint", form.complaint, complaintOpts),
+      rememberTerm(supabase, "diagnosis", form.diagnosis, diagnosisOpts),
+    ]);
     return true;
   }
 
@@ -263,7 +284,7 @@ export default function VisitEditor({
           <Autocomplete
             value={form.complaint}
             disabled={readOnly}
-            options={COMPLAINTS}
+            options={complaintOpts}
             placeholder="Type to search complaints…"
             onChange={(v) => setForm({ ...form, complaint: v })}
           />
@@ -273,7 +294,7 @@ export default function VisitEditor({
           <Autocomplete
             value={form.diagnosis}
             disabled={readOnly}
-            options={DIAGNOSES}
+            options={diagnosisOpts}
             placeholder="Type to search diagnoses…"
             onChange={(v) => setForm({ ...form, diagnosis: v })}
           />
