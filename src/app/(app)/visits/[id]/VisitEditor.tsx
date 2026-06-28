@@ -4,6 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { calcQty } from "@/lib/types";
+import Autocomplete from "@/components/Autocomplete";
+import MedicineSelect from "@/components/MedicineSelect";
+import { COMPLAINTS, DIAGNOSES, CO_MORBS } from "@/lib/clinicalData";
 import type {
   Frequency,
   Medicine,
@@ -92,6 +95,29 @@ export default function VisitEditor({
   );
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+
+  // ----- co-morbidities (checkbox chips + free-text "other") -----
+  const comorbTokens = form.comorbidities
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const selectedComorbs = CO_MORBS.filter((c) =>
+    comorbTokens.some((t) => t.toLowerCase() === c.toLowerCase())
+  );
+  const otherComorb = comorbTokens
+    .filter((t) => !CO_MORBS.some((c) => c.toLowerCase() === t.toLowerCase()))
+    .join(", ");
+
+  function setComorbs(selected: string[], other: string) {
+    const others = other.split(",").map((s) => s.trim()).filter(Boolean);
+    setForm({ ...form, comorbidities: [...selected, ...others].join(", ") });
+  }
+  function toggleComorb(c: string) {
+    const next = selectedComorbs.some((x) => x.toLowerCase() === c.toLowerCase())
+      ? selectedComorbs.filter((x) => x.toLowerCase() !== c.toLowerCase())
+      : [...selectedComorbs, c];
+    setComorbs(next, otherComorb);
+  }
 
   function updateRow(i: number, patch: Partial<RxRow>) {
     setRows((rs) =>
@@ -232,9 +258,59 @@ export default function VisitEditor({
       {/* Clinical */}
       <section className="card mt-6 space-y-4">
         <h2 className="font-semibold">Clinical notes</h2>
-        <Area label="Complaint" value={form.complaint} disabled={readOnly} onChange={(v) => setForm({ ...form, complaint: v })} />
-        <Area label="Diagnosis" value={form.diagnosis} disabled={readOnly} onChange={(v) => setForm({ ...form, diagnosis: v })} />
-        <Area label="Comorbidities" value={form.comorbidities} disabled={readOnly} onChange={(v) => setForm({ ...form, comorbidities: v })} />
+        <div>
+          <label className="label">Complaint</label>
+          <Autocomplete
+            value={form.complaint}
+            disabled={readOnly}
+            options={COMPLAINTS}
+            placeholder="Type to search complaints…"
+            onChange={(v) => setForm({ ...form, complaint: v })}
+          />
+        </div>
+        <div>
+          <label className="label">Diagnosis</label>
+          <Autocomplete
+            value={form.diagnosis}
+            disabled={readOnly}
+            options={DIAGNOSES}
+            placeholder="Type to search diagnoses…"
+            onChange={(v) => setForm({ ...form, diagnosis: v })}
+          />
+        </div>
+        <div>
+          <label className="label">Co-morbidities</label>
+          <div className="flex flex-wrap gap-2">
+            {CO_MORBS.map((c) => {
+              const checked = comorbTokens.some(
+                (t) => t.toLowerCase() === c.toLowerCase()
+              );
+              return (
+                <button
+                  type="button"
+                  key={c}
+                  disabled={readOnly}
+                  onClick={() => toggleComorb(c)}
+                  className={`rounded-full border px-3 py-1 text-sm transition ${
+                    checked
+                      ? "border-brand-600 bg-brand-600 text-white"
+                      : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
+                  } disabled:opacity-60`}
+                >
+                  {checked ? "✓ " : ""}
+                  {c}
+                </button>
+              );
+            })}
+          </div>
+          <input
+            className="input mt-2"
+            disabled={readOnly}
+            placeholder="Other co-morbidities (comma separated)"
+            value={otherComorb}
+            onChange={(e) => setComorbs(selectedComorbs, e.target.value)}
+          />
+        </div>
         <Area label="Notes" value={form.notes} disabled={readOnly} onChange={(v) => setForm({ ...form, notes: v })} />
         <div className="max-w-xs">
           <label className="label">Consultation fee ({settings?.currency_symbol ?? "$"})</label>
@@ -270,19 +346,12 @@ export default function VisitEditor({
             >
               <div className="col-span-2 md:col-span-3">
                 <label className="label">Medicine</label>
-                <select
-                  className="input"
-                  disabled={readOnly}
+                <MedicineSelect
+                  medicines={medicines}
                   value={r.medicine_id}
-                  onChange={(e) => updateRow(i, { medicine_id: e.target.value })}
-                >
-                  <option value="">Select…</option>
-                  {medicines.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name} {m.strength ? `(${m.strength})` : ""} — stock {m.stock_qty}
-                    </option>
-                  ))}
-                </select>
+                  disabled={readOnly}
+                  onChange={(id) => updateRow(i, { medicine_id: id })}
+                />
               </div>
               <div className="md:col-span-1">
                 <label className="label">Dose</label>

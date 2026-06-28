@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import Autocomplete from "@/components/Autocomplete";
+import { COMPLAINTS } from "@/lib/clinicalData";
 import type { Patient, Vitals } from "@/lib/types";
 
 export default function IntakePage() {
@@ -257,7 +259,12 @@ export default function IntakePage() {
         {/* complaint */}
         <section className="card">
           <label className="label">Presenting complaint</label>
-          <textarea className="input min-h-[90px]" value={complaint} onChange={(e) => setComplaint(e.target.value)} />
+          <Autocomplete
+            value={complaint}
+            options={COMPLAINTS}
+            placeholder="Type to search complaints…"
+            onChange={setComplaint}
+          />
         </section>
 
         {error && <p className="text-sm text-red-600">{error}</p>}
