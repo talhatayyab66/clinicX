@@ -3,32 +3,14 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 const DOMAIN = process.env.CLINIC_DOMAIN || "clinic.local";
 
-// GET → is setup still available? (no profiles yet)
+// GET → setup is always open (multiple admins allowed).
 export async function GET() {
-  const admin = createAdminClient();
-  const { count, error } = await admin
-    .from("profiles")
-    .select("*", { count: "exact", head: true });
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-  return NextResponse.json({ available: (count ?? 0) === 0 });
+  return NextResponse.json({ available: true });
 }
 
-// POST → create the very first admin + the settings row. Self-disables.
+// POST → create an admin account (no limit) and ensure the settings row exists.
 export async function POST(req: Request) {
   const admin = createAdminClient();
-
-  // Guard: only allowed while there are zero profiles.
-  const { count } = await admin
-    .from("profiles")
-    .select("*", { count: "exact", head: true });
-  if ((count ?? 0) > 0) {
-    return NextResponse.json(
-      { error: "Setup already completed." },
-      { status: 403 }
-    );
-  }
 
   const body = await req.json().catch(() => null);
   const username = (body?.username ?? "").trim().toLowerCase();
@@ -84,13 +66,20 @@ export async function POST(req: Request) {
   if (profErr) {
     // roll back the orphan auth user
     await admin.auth.admin.deleteUser(created.user.id);
-    return NextResponse.json({ error: profErr.message }, { status: 500 });
+    const msg = profErr.message.includes("duplicate")
+      ? "That username is already taken"
+      : profErr.message;
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 
-  // 3. settings singleton
-  await admin
+  // 3. settings singleton — only create it the first time; don't overwrite
+  // an existing clinic name when later admins are added.
+  const { count: settingsCount } = await admin
     .from("settings")
-    .upsert({ id: 1, clinic_name }, { onConflict: "id" });
+    .select("*", { count: "exact", head: true });
+  if ((settingsCount ?? 0) === 0) {
+    await admin.from("settings").insert({ id: 1, clinic_name });
+  }
 
   return NextResponse.json({ ok: true });
 }

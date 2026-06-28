@@ -70,7 +70,7 @@ export default function SetupPage() {
       <div className="w-full max-w-md">
         <h1 className="mb-1 text-2xl font-bold text-brand-700">Welcome to ClinicX</h1>
         <p className="mb-6 text-sm text-gray-500">
-          Create the first administrator account.
+          Create an administrator account.
         </p>
         <form onSubmit={onSubmit} className="card space-y-4">
           <div>
