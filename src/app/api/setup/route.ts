@@ -3,6 +3,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 const DOMAIN = process.env.CLINIC_DOMAIN || "clinic.local";
 
+// never cache this route — always reflect live DB state
+export const dynamic = "force-dynamic";
+
 // GET → setup is always open (multiple admins allowed).
 export async function GET() {
   return NextResponse.json({ available: true });

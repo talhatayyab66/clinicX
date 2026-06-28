@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function SetupPage() {
   const router = useRouter();
-  const [available, setAvailable] = useState<boolean | null>(null);
   const [form, setForm] = useState({
     clinic_name: "",
     full_name: "",
@@ -15,13 +14,6 @@ export default function SetupPage() {
   });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    fetch("/api/setup")
-      .then((r) => r.json())
-      .then((d) => setAvailable(!!d.available))
-      .catch(() => setAvailable(false));
-  }, []);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -39,30 +31,6 @@ export default function SetupPage() {
       return;
     }
     router.push("/login");
-  }
-
-  if (available === null) {
-    return (
-      <div className="flex min-h-screen items-center justify-center text-gray-500">
-        Checking…
-      </div>
-    );
-  }
-
-  if (!available) {
-    return (
-      <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="card max-w-md text-center">
-          <h1 className="text-xl font-semibold">Setup already completed</h1>
-          <p className="mt-2 text-sm text-gray-500">
-            An admin account already exists. Please sign in instead.
-          </p>
-          <a href="/login" className="btn-primary mt-4 inline-flex">
-            Go to login
-          </a>
-        </div>
-      </div>
-    );
   }
 
   return (
