@@ -37,9 +37,12 @@ export default async function ReceiptPage({
 
   return (
     <div>
-      <div className="mb-4 flex gap-2 no-print">
+      <div className="mb-4 flex flex-wrap gap-2 no-print">
         <Link href="/dispense" className="btn-secondary">← Queue</Link>
         <PrintButton label="Print receipt" />
+        <Link href={`/visits/${r.visit_id}/slip`} className="btn-secondary" target="_blank">
+          Print prescription
+        </Link>
       </div>
 
       {/* 80mm thermal-style receipt; on A4 it just centers */}

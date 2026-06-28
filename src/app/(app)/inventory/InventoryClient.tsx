@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { money } from "@/lib/format";
+import { downloadMedicineTemplate, parseMedicineWorkbook } from "@/lib/excel";
 import type { Medicine, Settings } from "@/lib/types";
 
 const EMPTY = {
@@ -31,6 +32,9 @@ export default function InventoryClient({
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<typeof EMPTY | null>(null);
   const [restockFor, setRestockFor] = useState<Medicine | null>(null);
+  const [importMsg, setImportMsg] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -52,16 +56,81 @@ export default function InventoryClient({
 
   const today = new Date().toISOString().slice(0, 10);
 
+  async function onImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) e.target.value = ""; // allow re-importing the same file
+    if (!file) return;
+    setImportMsg(null);
+    setImporting(true);
+    try {
+      const rows = await parseMedicineWorkbook(file);
+      if (rows.length === 0) {
+        setImportMsg("No medicine rows found in that file.");
+        return;
+      }
+      // match existing by name (case-insensitive): update, else insert
+      const byName = new Map(meds.map((m) => [m.name.toLowerCase(), m]));
+      let added = 0;
+      let updated = 0;
+      for (const row of rows) {
+        const existing = byName.get(row.name.toLowerCase());
+        if (existing) {
+          const { error } = await supabase
+            .from("medicines")
+            .update(row)
+            .eq("id", existing.id);
+          if (!error) updated++;
+        } else {
+          const { error } = await supabase.from("medicines").insert(row);
+          if (!error) added++;
+        }
+      }
+      setImportMsg(`Imported: ${added} added, ${updated} updated.`);
+      await load();
+    } catch (err) {
+      setImportMsg(
+        err instanceof Error ? `Import failed: ${err.message}` : "Import failed"
+      );
+    } finally {
+      setImporting(false);
+    }
+  }
+
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Inventory</h1>
         {isAdmin && (
-          <button className="btn-primary" onClick={() => setEditing({ ...EMPTY })}>
-            Add medicine
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button className="btn-secondary" onClick={downloadMedicineTemplate}>
+              Excel template
+            </button>
+            <button
+              className="btn-secondary"
+              onClick={() => fileRef.current?.click()}
+              disabled={importing}
+            >
+              {importing ? "Importing…" : "Import Excel"}
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              className="hidden"
+              onChange={onImportFile}
+            />
+            <button className="btn-primary" onClick={() => setEditing({ ...EMPTY })}>
+              Add medicine
+            </button>
+          </div>
         )}
       </div>
+
+      {importMsg && (
+        <div className="mb-4 rounded-md border border-brand-200 bg-brand-50 px-4 py-2 text-sm text-brand-700">
+          {importMsg}
+        </div>
+      )}
 
       <input
         className="input mb-4 max-w-md"
